@@ -42,47 +42,62 @@ navigationLinks.forEach((link) => {
       panel.hidden = !isActive;
     });
   });
+});
 
-  rsvpForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
+const thankYouLetter = document.querySelector('#thank-you-letter');
+const thankYouCloseButton = thankYouLetter.querySelector('.thank-you-letter__close');
+const thankYouGreeting = thankYouLetter.querySelector('#thank-you-greeting');
 
-    const submitButton = rsvpForm.querySelector('.submit-button');
-    const status = rsvpForm.querySelector('.form-status');
-    const action = new URL(rsvpForm.action);
-    action.pathname = `/ajax${action.pathname}`;
+rsvpForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
 
-    submitButton.disabled = true;
-    submitButton.textContent = 'Sending...';
-    status.textContent = '';
-    status.classList.remove('is-error');
+  const submitButton = rsvpForm.querySelector('.submit-button');
+  const status = rsvpForm.querySelector('.form-status');
+  const action = new URL(rsvpForm.action);
+  action.pathname = `/ajax${action.pathname}`;
 
-    try {
-      const response = await fetch(action, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify(Object.fromEntries(new FormData(rsvpForm))),
-      });
+  submitButton.disabled = true;
+  submitButton.textContent = 'Sending...';
+  status.textContent = '';
+  status.classList.remove('is-error');
 
-      if (!response.ok) {
-        throw new Error(`The RSVP service returned ${response.status}.`);
-      }
+  try {
+    const response = await fetch(action, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(Object.fromEntries(new FormData(rsvpForm))),
+    });
 
-      const result = await response.json();
-      if (!result.success) {
-        throw new Error(result.message || 'The RSVP could not be sent.');
-      }
-
-      submitButton.textContent = 'Sent';
-      status.textContent = 'Your attendance confirmation has been sent.';
-    } catch (error) {
-      submitButton.disabled = false;
-      submitButton.textContent = 'Submit';
-      status.classList.add('is-error');
-      status.textContent = 'We could not send your confirmation. Please try again.';
-      console.error('RSVP submission failed:', error);
+    if (!response.ok) {
+      throw new Error(`The RSVP service returned ${response.status}.`);
     }
-  });
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || 'The RSVP could not be sent.');
+    }
+
+    const formData = new FormData(rsvpForm);
+    const guestName = [formData.get('First Name'), formData.get('Last Name')]
+      .filter((name) => typeof name === 'string' && name.trim())
+      .join(' ');
+    thankYouGreeting.textContent = guestName ? `Dear ${guestName},` : 'Dear guest,';
+    submitButton.textContent = 'Sent';
+    status.textContent = 'Your attendance confirmation has been sent.';
+    thankYouLetter.showModal();
+    thankYouCloseButton.focus();
+  } catch (error) {
+    submitButton.disabled = false;
+    submitButton.textContent = 'Submit';
+    status.classList.add('is-error');
+    status.textContent = 'We could not send your confirmation. Please try again.';
+    console.error('RSVP submission failed:', error);
+  }
+});
+
+thankYouCloseButton.addEventListener('click', () => {
+  thankYouLetter.close();
 });
